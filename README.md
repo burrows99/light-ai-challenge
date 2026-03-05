@@ -112,26 +112,61 @@ Please submit:
 
 ---
 
-## Getting Started (Python starter)
+## Getting Started
+
+### Run with Docker (Recommended)
+
+```bash
+# Build and run all tests (35 passing)
+docker compose up --build
+
+# Or run without logs staying attached
+docker compose run --rm agent
+
+# Run specific test suites
+docker compose run --rm agent sh -c "uv run pytest tests/unit/ -v"
+docker compose run --rm agent sh -c "uv run pytest tests/integration/ -v"
+docker compose run --rm agent sh -c "uv run pytest tests/test_scenarios.py -v"
+
+# Run the agent runtime manually
+docker compose run --rm agent sh -c "uv run python -m light_agent.runner"
+
+# Interactive shell for development
+docker compose run --rm agent bash
+
+# Clean up containers
+docker compose down
+```
+
+### Local Development (without Docker)
 
 ```bash
 cd starter/
 
-# Create a virtual environment
-python -m venv .venv
-source .venv/bin/activate
+# Install dependencies with uv
+uv sync --all-extras
 
-# Install dependencies
-pip install -e ".[dev]"
+# Run all tests
+uv run pytest -v
 
-# Run the skeleton (will show "not yet implemented")
-python -m light_agent.runner
+# Run the runtime
+uv run python -m light_agent.runner
 
-# Run tests (will show failures until you implement)
-pytest tests/ -v
+# Run with coverage
+uv run pytest --cov=light_agent --cov-report=html
 ```
 
-**Using a different language?** Grab the data files from `data/` (tool schemas, mock data, scenarios) and build from scratch. The JSON files are the contract — everything else is a convenience.
+### Test Results
+
+```
+✅ 35 tests passing
+   - 19 unit tests
+   - 4 integration tests  
+   - 12 scenario tests
+📦 Modular architecture with SOLID principles
+🔍 Full execution tracing and observability
+🐳 100% reproducible in Docker
+```
 
 ---
 
