@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+      - ../data:/app/data
+    environment:
+      - PYTHONPATH=/app/src
+    command: uv run pytest -v
