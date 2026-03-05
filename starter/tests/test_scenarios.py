@@ -6,7 +6,9 @@ Scenarios 1–3 are the baseline — we expect these to pass.
 Scenarios 4–5 are stretch goals that demonstrate deeper thinking.
 """
 
+import inspect
 import json
+import os
 from pathlib import Path
 
 from light_agent.config.runtime_config import RuntimeConfig
@@ -14,6 +16,8 @@ from light_agent.mock_llm import MockLLMClient
 from light_agent.mock_tools import MockToolExecutor
 from light_agent.runtime.agent_runtime import AgentRuntime, AgentResult
 from light_agent.tools.tool_registry import ToolRegistry
+
+from tests.test_utils import dump_trace_for_test
 
 SCENARIOS_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "scenarios.json"
 
@@ -42,10 +46,25 @@ def build_runtime() -> AgentRuntime:
     return AgentRuntime(llm, executor, registry, config)
 
 
-def run_agent(query: str) -> AgentResult:
-    """Run the agent with a query."""
+def run_agent(query: str, test_name: str = "") -> AgentResult:
+    """Run the agent with a query and optionally dump trace."""
     runtime = build_runtime()
-    return runtime.run(query)
+    result = runtime.run(query)
+    
+    # Always dump trace if TRACE_OUTPUT_DIR is set
+    trace_dir = os.getenv("TRACE_OUTPUT_DIR")
+    if trace_dir and result.trace:
+        # Get the calling test name from stack if not provided
+        if not test_name:
+            frame = inspect.currentframe()
+            if frame and frame.f_back:
+                test_name = frame.f_back.f_code.co_name
+            else:
+                test_name = "unknown"
+        
+        dump_trace_for_test(result.trace, test_name, "test_scenarios")
+    
+    return result
 
 
 # ======================================================================

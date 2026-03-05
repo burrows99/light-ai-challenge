@@ -1,6 +1,8 @@
 """Trace recorder for agent execution observability."""
 
+import json
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
@@ -79,3 +81,15 @@ class TraceRecorder:
             "total_steps": len(self.steps),
             "tool_calls": tool_calls
         }
+    
+    def dump_to_file(self, file_path: str) -> None:
+        """Dump trace to a JSON file.
+        
+        Args:
+            file_path: Path to the output file
+        """
+        output_path = Path(file_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(output_path, 'w') as f:
+            json.dump(self.export(), f, indent=2)

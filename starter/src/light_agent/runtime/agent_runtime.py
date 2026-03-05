@@ -1,11 +1,11 @@
 """Agent runtime - orchestrates LLM and tool execution."""
 
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from light_agent.config.runtime_config import RuntimeConfig
 from light_agent.mock_llm import MockLLMClient
 from light_agent.mock_tools import MockToolExecutor
-from light_agent.types import Message, ToolCall, ToolResult, ToolCallStatus, ExecutionTrace
+from light_agent.types import Message
 from light_agent.tools.tool_registry import ToolRegistry
 
 

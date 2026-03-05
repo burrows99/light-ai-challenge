@@ -1,0 +1,5 @@
+# Ignore all trace files
+*.json
+
+# But keep this directory
+!.gitignore

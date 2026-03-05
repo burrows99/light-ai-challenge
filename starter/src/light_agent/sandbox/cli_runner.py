@@ -26,7 +26,7 @@ def build_runtime() -> AgentRuntime:
         raise FileNotFoundError(f"Mock data file not found: {mock_data_path}")
     
     registry = ToolRegistry(str(tools_path))
-    executor = ToolExecutor(registry, str(mock_data_path))
+    executor = MockToolExecutor(str(mock_data_path))
     llm = MockLLMClient()
     config = RuntimeConfig(max_iterations=10)
     

@@ -8,7 +8,9 @@ services:
     volumes:
       - ./starter:/app/starter
       - ./data:/app/data
+      - ./traces:/app/traces
     environment:
       - PYTHONPATH=/app/starter/src
+      - TRACE_OUTPUT_DIR=/app/traces
     working_dir: /app/starter
     command: sh -c "uv sync --all-extras && uv run pytest -v"
