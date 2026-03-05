@@ -7,6 +7,12 @@ dependencies = [
     "pydantic>=2.0",
 ]
 
+[project.scripts]
+light-agent = "light_agent.runner:main"
+
+[tool.uv]
+package = true
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",

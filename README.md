@@ -117,7 +117,7 @@ Please submit:
 ### Run with Docker (Recommended)
 
 ```bash
-# Build and run all tests (35 passing)
+# Build and run all tests (45 passing)
 docker compose up --build
 
 # Or run without logs staying attached
@@ -128,15 +128,18 @@ docker compose run --rm agent sh -c "uv run pytest tests/unit/ -v"
 docker compose run --rm agent sh -c "uv run pytest tests/integration/ -v"
 docker compose run --rm agent sh -c "uv run pytest tests/test_scenarios.py -v"
 
-# Run the agent runtime manually
-docker compose run --rm agent sh -c "uv run python -m light_agent.runner"
+# Run the agent demonstration (shows 3 example scenarios)
+docker compose run --rm agent sh -c "uv run light-agent"
+
+# Generate HTML coverage report
+docker compose run --rm agent sh -c "uv run pytest --cov=src/light_agent --cov-report=html"
+# Then copy from container: docker cp <container_id>:/app/htmlcov ./htmlcov
+
+# Generate terminal coverage report
+docker compose run --rm agent sh -c "uv run pytest --cov=src/light_agent --cov-report=term"
 
 # Interactive shell for development
 docker compose run --rm agent bash
-
-# Generate HTML coverage report
-docker compose run --rm agent sh -c "uv run pytest --cov=light_agent --cov-report=html"
-# Open starter/htmlcov/index.html in your browser
 
 # Clean up containers
 docker compose down
@@ -144,35 +147,44 @@ docker compose down
 
 ### Local Development (without Docker)
 
-```bash
-cd starter/
+All commands should be run from the `starter/` directory using `uv`:
 
-# Install dependencies with uv
+```bash
+# 1. Navigate to starter directory and install dependencies
+cd starter
 uv sync --all-extras
 
-# Run all tests
+# 2. Run all tests with verbose output
 uv run pytest -v
 
-# Run the runtime
+# 3. Run the agent demonstration (two equivalent ways)
+uv run light-agent
+# OR
 uv run python -m light_agent.runner
 
-# Generate HTML coverage report with interactive UI
-uv run pytest --cov=light_agent --cov-report=html
+# 4. Generate HTML coverage report
+uv run pytest --cov=src/light_agent --cov-report=html
 # Open htmlcov/index.html in your browser
 
-# Run with terminal coverage report
-uv run pytest --cov=light_agent --cov-report=term-missing
+# 5. Generate terminal coverage report with missing lines
+uv run pytest --cov=src/light_agent --cov-report=term-missing
+
+# 6. Run specific test suites
+uv run pytest tests/unit/ -v
+uv run pytest tests/integration/ -v
+uv run pytest tests/test_scenarios.py -v
 ```
 
 ### Test Results
 
 ```
-✅ 35 tests passing
-   - 19 unit tests
+✅ 45 tests passing
+   - 29 unit tests
    - 4 integration tests  
    - 12 scenario tests
-📦 Modular architecture with SOLID principles
+📦 Protocol-based architecture following SOLID principles
 🔍 Full execution tracing and observability
+🎯 86% code coverage (100% on core business logic)
 🐳 100% reproducible in Docker
 ```
 
