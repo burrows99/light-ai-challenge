@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: starter/Dockerfile
+    volumes:
+      - ./starter:/app/starter
+      - ./data:/app/data
+    environment:
+      - PYTHONPATH=/app/starter/src
+    working_dir: /app/starter
+    command: sh -c "uv sync --all-extras && uv run pytest -v"
