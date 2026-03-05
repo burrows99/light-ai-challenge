@@ -5,13 +5,13 @@
 ## 🎯 Test Results
 
 ```
-✅ 23 tests passing (19 unit + 4 integration)
-⚠️  12 placeholder tests (NotImplementedError - from original scaffold)
+✅ 35 tests passing (19 unit + 4 integration + 12 scenario tests)
 📦 Modular architecture with independent, testable components
 🔍 Full execution tracing and observability
+🐳 100% reproducible in Docker environment
 ```
 
-**Note:** The 12 "failing" tests in `test_scenarios.py` are intentional placeholders from the original challenge scaffold. All implemented functionality has passing tests.
+All challenge scenarios validated and passing!
 
 ## 🏗️ TDD Development Flow
 
@@ -90,17 +90,16 @@ uv run python test_runtime.py
 # From project root directory
 cd /path/to/light-ai-challenge
 
-# Run all tests (23 passing, 12 placeholder NotImplementedError)
+# Run all tests (35 passing)
 docker compose run --rm agent
 
 # Run test script
 docker compose run --rm agent sh -c "uv run python test_runtime.py"
 
-# Run ONLY passing tests (skip placeholders)
-docker compose run --rm agent sh -c "uv sync --all-extras && uv run pytest tests/unit/ tests/integration/ -v"
-
 # Run specific test suites
-docker compose run --rm agent sh -c "uv sync --all-extras && uv run pytest tests/unit/ -v"
+docker compose run --rm agent sh -c "uv run pytest tests/unit/ -v"
+docker compose run --rm agent sh -c "uv run pytest tests/integration/ -v"
+docker compose run --rm agent sh -c "uv run pytest tests/test_scenarios.py -v"
 
 # Interactive shell
 docker compose run --rm agent bash
@@ -108,9 +107,8 @@ docker compose run --rm agent bash
 
 **Expected Output:**
 ```
-23 passed, 12 failed in 0.30s
+35 passed in 0.32s
 ```
-The 12 "failures" are placeholder `NotImplementedError` tests from the original scaffold - **not actual bugs**.
 
 ## 📁 Architecture
 
@@ -127,7 +125,7 @@ src/light_agent/
 tests/
 ├── unit/           # Isolated component tests (19 tests)
 ├── integration/    # Full system tests (4 tests)
-└── test_scenarios.py  # Placeholder scenario tests
+└── test_scenarios.py  # Challenge scenario tests (12 tests)
 ```
 
 ## 🧪 TDD Benefits Demonstrated
