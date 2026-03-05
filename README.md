@@ -134,6 +134,10 @@ docker compose run --rm agent sh -c "uv run python -m light_agent.runner"
 # Interactive shell for development
 docker compose run --rm agent bash
 
+# Generate HTML coverage report
+docker compose run --rm agent sh -c "uv run pytest --cov=light_agent --cov-report=html"
+# Open starter/htmlcov/index.html in your browser
+
 # Clean up containers
 docker compose down
 ```
@@ -152,8 +156,12 @@ uv run pytest -v
 # Run the runtime
 uv run python -m light_agent.runner
 
-# Run with coverage
+# Generate HTML coverage report with interactive UI
 uv run pytest --cov=light_agent --cov-report=html
+# Open htmlcov/index.html in your browser
+
+# Run with terminal coverage report
+uv run pytest --cov=light_agent --cov-report=term-missing
 ```
 
 ### Test Results
