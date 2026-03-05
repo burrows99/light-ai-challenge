@@ -8,20 +8,32 @@ from light_agent.mock_tools import MockToolExecutor
 from light_agent.runtime.agent_runtime import AgentRuntime
 from light_agent.tools.tool_registry import ToolRegistry
 
+# Import adapters for dependency injection
+from light_agent.adapters.light_ai_llm_adapter import LightAILLMAdapter
+from light_agent.adapters.light_ai_tool_adapter import LightAIToolExecutorAdapter
 
-def build_runtime() -> AgentRuntime:
-    """Build a complete runtime for testing."""
+
+def build_runtime(max_iterations: int = 10) -> AgentRuntime:
+    """Build a complete runtime for testing using dependency injection."""
     # Data is in parent directory of starter
     base_path = Path(__file__).parent.parent.parent.parent / "data"
     tools_path = base_path / "tools.json"
     mock_data_path = base_path / "mock_data.json"
     
-    registry = ToolRegistry(str(tools_path))
-    executor = MockToolExecutor(str(mock_data_path))
-    llm = MockLLMClient()
-    config = RuntimeConfig(max_iterations=10)
+    # Create Light AI's concrete implementations
+    llm_client = MockLLMClient()
+    tool_executor = MockToolExecutor(str(mock_data_path))
     
-    return AgentRuntime(llm, executor, registry, config)
+    # Wrap in adapters that implement protocols (Dependency Inversion Principle)
+    llm_provider = LightAILLMAdapter(llm_client)
+    executor = LightAIToolExecutorAdapter(tool_executor)
+    
+    # Create other components
+    registry = ToolRegistry(str(tools_path))
+    config = RuntimeConfig(max_iterations=max_iterations)
+    
+    # Inject dependencies into runtime
+    return AgentRuntime(llm_provider, executor, registry, config)
 
 
 def test_simple_query():
@@ -57,8 +69,7 @@ def test_agent_handles_tool_error():
 
 def test_max_iterations():
     """Test that runtime respects max iterations."""
-    runtime = build_runtime()
-    runtime.config.max_iterations = 2
+    runtime = build_runtime(max_iterations=2)
     
     result = runtime.run("Show me all invoices")
     

@@ -17,6 +17,10 @@ from light_agent.mock_tools import MockToolExecutor
 from light_agent.runtime.agent_runtime import AgentRuntime, AgentResult
 from light_agent.tools.tool_registry import ToolRegistry
 
+# Import adapters for dependency injection
+from light_agent.adapters.light_ai_llm_adapter import LightAILLMAdapter
+from light_agent.adapters.light_ai_tool_adapter import LightAIToolExecutorAdapter
+
 from tests.test_utils import dump_trace_for_test
 
 SCENARIOS_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "scenarios.json"
@@ -31,19 +35,27 @@ SCENARIOS = load_scenarios()
 
 
 def build_runtime() -> AgentRuntime:
-    """Build a complete runtime for testing."""
+    """Build a complete runtime for testing using dependency injection."""
     # Data is in parent directory of starter
     # test_scenarios.py is at tests/ level, not tests/integration/, so we need one less .parent
     base_path = Path(__file__).resolve().parent.parent.parent / "data"
     tools_path = base_path / "tools.json"
     mock_data_path = base_path / "mock_data.json"
     
+    # Create Light AI's concrete implementations
+    llm_client = MockLLMClient()
+    tool_executor = MockToolExecutor(str(mock_data_path))
+    
+    # Wrap in adapters that implement protocols (Dependency Inversion Principle)
+    llm_provider = LightAILLMAdapter(llm_client)
+    executor = LightAIToolExecutorAdapter(tool_executor)
+    
+    # Create other components
     registry = ToolRegistry(str(tools_path))
-    executor = MockToolExecutor(str(mock_data_path))
-    llm = MockLLMClient()
     config = RuntimeConfig(max_iterations=10)
     
-    return AgentRuntime(llm, executor, registry, config)
+    # Inject dependencies into runtime
+    return AgentRuntime(llm_provider, executor, registry, config)
 
 
 def run_agent(query: str, test_name: str = "") -> AgentResult:
