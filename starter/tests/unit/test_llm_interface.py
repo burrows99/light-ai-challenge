@@ -1,54 +1,63 @@
-"""Unit tests for LLM Interface."""
+"""Unit tests for LLM Interface (Light AI's MockLLMClient)."""
 
-import pytest
-
-from light_agent.llm.mock_llm_client import MockLLMClient
+from light_agent.mock_llm import MockLLMClient
+from light_agent.types import Message
 
 
 def test_mock_llm_returns_action():
-    """Test that mock LLM returns an action."""
+    """Test that mock LLM returns a Message."""
     llm = MockLLMClient()
     
-    response = llm.generate(
-        messages=[{"role": "user", "content": "show invoices"}],
-        tools=[]
-    )
+    messages = [
+        Message(role="user", content="Show me pending invoices")
+    ]
+    tools = [{"name": "list_invoices"}]
     
-    assert "type" in response
-    assert response["type"] in ["tool_call", "final_answer"]
+    response = llm.chat(messages, tools)
+    
+    assert isinstance(response, Message)
+    assert response.role == "assistant"
+    # Should either have tool_calls or content
+    assert response.tool_calls is not None or response.content is not None
 
 
 def test_mock_llm_tool_call_format():
-    """Test that tool_call response has correct format."""
+    """Test that tool call response has correct format."""
     llm = MockLLMClient()
     
-    response = llm.generate(
-        messages=[{"role": "user", "content": "list pending invoices"}],
-        tools=[{"name": "list_invoices"}]
-    )
+    messages = [
+        Message(role="user", content="Show me all unpaid invoices over €5,000")
+    ]
+    tools = [{"name": "list_invoices"}]
     
-    # Should eventually trigger a tool call
-    if response["type"] == "tool_call":
-        assert "tool" in response
-        assert "arguments" in response
+    response = llm.chat(messages, tools)
+    
+    # Light AI's MockLLMClient should return tool_calls for this query
+    if response.tool_calls:
+        assert len(response.tool_calls) > 0
+        tool_call = response.tool_calls[0]
+        assert hasattr(tool_call, 'name')
+        assert hasattr(tool_call, 'arguments')
 
 
 def test_mock_llm_final_answer_format():
-    """Test that final_answer response has correct format."""
+    """Test that final answer response has correct format."""
     llm = MockLLMClient()
     
-    # Create a conversation that leads to final answer
+    # Simulate conversation that leads to final answer
     messages = [
-        {"role": "user", "content": "show invoices"},
-        {"role": "assistant", "content": "calling list_invoices"},
-        {"role": "tool", "content": "Found 5 invoices"}
+        Message(role="user", content="Show me all unpaid invoices over €5,000"),
+        Message(role="assistant", tool_calls=[]),  # Simulated tool call response
+        Message(role="tool", content='[{"id": "INV-001"}]')
     ]
+    tools = [{"name": "list_invoices"}]
     
-    response = llm.generate(messages=messages, tools=[])
+    response = llm.chat(messages, tools)
     
-    # Should eventually give final answer
-    if response["type"] == "final_answer":
-        assert "content" in response
+    # After tool result, should give final answer
+    if response.content:
+        assert isinstance(response.content, str)
+        assert len(response.content) > 0
 
 
 def test_mock_llm_handles_conversation():
@@ -56,17 +65,15 @@ def test_mock_llm_handles_conversation():
     llm = MockLLMClient()
     
     messages = [
-        {"role": "user", "content": "What invoices do we have?"}
+        Message(role="user", content="Show me all unpaid invoices over €5,000"),
+        Message(role="assistant", tool_calls=[]),
+        Message(role="tool", content='[{"id": "INV-001"}]')
     ]
+    tools = [{"name": "list_invoices"}]
     
-    response1 = llm.generate(messages=messages, tools=[{"name": "list_invoices"}])
-    assert "type" in response1
+    response = llm.chat(messages, tools)
     
-    # Add tool result
-    messages.extend([
-        {"role": "assistant", "content": str(response1)},
-        {"role": "tool", "content": "invoice data"}
-    ])
-    
-    response2 = llm.generate(messages=messages, tools=[])
-    assert "type" in response2
+    # Should handle the conversation and return a Message
+    assert response is not None
+    assert isinstance(response, Message)
+    assert response.role == "assistant"

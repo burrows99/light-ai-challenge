@@ -10,9 +10,9 @@ import json
 from pathlib import Path
 
 from light_agent.config.runtime_config import RuntimeConfig
-from light_agent.llm.mock_llm_client import MockLLMClient
+from light_agent.mock_llm import MockLLMClient
+from light_agent.mock_tools import MockToolExecutor
 from light_agent.runtime.agent_runtime import AgentRuntime, AgentResult
-from light_agent.tools.tool_executor import ToolExecutor
 from light_agent.tools.tool_registry import ToolRegistry
 
 SCENARIOS_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "scenarios.json"
@@ -35,11 +35,11 @@ def build_runtime() -> AgentRuntime:
     mock_data_path = base_path / "mock_data.json"
     
     registry = ToolRegistry(str(tools_path))
-    executor = ToolExecutor(registry, str(mock_data_path))
+    executor = MockToolExecutor(str(mock_data_path))
     llm = MockLLMClient()
     config = RuntimeConfig(max_iterations=10)
     
-    return AgentRuntime(llm, registry, executor, config)
+    return AgentRuntime(llm, executor, registry, config)
 
 
 def run_agent(query: str) -> AgentResult:

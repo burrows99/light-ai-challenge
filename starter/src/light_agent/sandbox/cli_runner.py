@@ -4,9 +4,9 @@ import sys
 from pathlib import Path
 
 from light_agent.config.runtime_config import RuntimeConfig
-from light_agent.llm.mock_llm_client import MockLLMClient
+from light_agent.mock_llm import MockLLMClient
+from light_agent.mock_tools import MockToolExecutor
 from light_agent.runtime.agent_runtime import AgentRuntime
-from light_agent.tools.tool_executor import ToolExecutor
 from light_agent.tools.tool_registry import ToolRegistry
 
 

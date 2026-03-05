@@ -8,9 +8,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from light_agent.config.runtime_config import RuntimeConfig
-from light_agent.llm.mock_llm_client import MockLLMClient
+from light_agent.mock_llm import MockLLMClient
+from light_agent.mock_tools import MockToolExecutor
 from light_agent.runtime.agent_runtime import AgentRuntime
-from light_agent.tools.tool_executor import ToolExecutor
 from light_agent.tools.tool_registry import ToolRegistry
 
 
@@ -21,11 +21,11 @@ def main():
     
     print("Loading tools and data...")
     registry = ToolRegistry(str(base_path / "tools.json"))
-    executor = ToolExecutor(registry, str(base_path / "mock_data.json"))
+    executor = MockToolExecutor(str(base_path / "mock_data.json"))
     llm = MockLLMClient()
     config = RuntimeConfig(max_iterations=5)
     
-    runtime = AgentRuntime(llm, registry, executor, config)
+    runtime = AgentRuntime(llm, executor, registry, config)
     
     print("\n=== Testing Agent Runtime ===\n")
     

@@ -3,9 +3,9 @@
 from pathlib import Path
 
 from light_agent.config.runtime_config import RuntimeConfig
-from light_agent.llm.mock_llm_client import MockLLMClient
+from light_agent.mock_llm import MockLLMClient
+from light_agent.mock_tools import MockToolExecutor
 from light_agent.runtime.agent_runtime import AgentRuntime
-from light_agent.tools.tool_executor import ToolExecutor
 from light_agent.tools.tool_registry import ToolRegistry
 
 
@@ -17,11 +17,11 @@ def build_runtime() -> AgentRuntime:
     mock_data_path = base_path / "mock_data.json"
     
     registry = ToolRegistry(str(tools_path))
-    executor = ToolExecutor(registry, str(mock_data_path))
+    executor = MockToolExecutor(str(mock_data_path))
     llm = MockLLMClient()
     config = RuntimeConfig(max_iterations=10)
     
-    return AgentRuntime(llm, registry, executor, config)
+    return AgentRuntime(llm, executor, registry, config)
 
 
 def test_simple_query():
@@ -39,23 +39,20 @@ def test_agent_handles_tool_error():
     """Test that agent handles tool errors gracefully."""
     runtime = build_runtime()
     
-    # Manually test tool executor error handling
-    # This verifies the executor properly raises errors for missing invoices
-    from light_agent.tools.tool_executor import ToolExecutor
+    # Test with Light AI's MockToolExecutor error handling
+    from light_agent.mock_tools import MockToolExecutor
+    from light_agent.types import ToolCallStatus
     from pathlib import Path
-    import pytest
     
     base_path = Path(__file__).parent.parent.parent.parent / "data"
-    tools_path = base_path / "tools.json"
     mock_data_path = base_path / "mock_data.json"
     
-    from light_agent.tools.tool_registry import ToolRegistry
-    registry = ToolRegistry(str(tools_path))
-    executor = ToolExecutor(registry, str(mock_data_path))
+    executor = MockToolExecutor(str(mock_data_path))
     
-    # This should raise an error for missing invoice
-    with pytest.raises(ValueError, match="Invoice not found"):
-        executor.execute("get_invoice", {"invoice_id": "INV-999999"})
+    # Light AI's MockToolExecutor returns ToolResult with ERROR status instead of raising
+    result = executor.execute("get_invoice", {"invoice_id": "INV-999999"})
+    assert result.status == ToolCallStatus.ERROR
+    assert "not found" in result.error.lower()
 
 
 def test_max_iterations():

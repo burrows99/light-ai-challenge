@@ -3,10 +3,10 @@
 from typing import Any, Dict, List
 
 from light_agent.config.runtime_config import RuntimeConfig
-from light_agent.llm.mock_llm_client import MockLLMClient
-from light_agent.tools.tool_executor import ToolExecutor
+from light_agent.mock_llm import MockLLMClient
+from light_agent.mock_tools import MockToolExecutor
+from light_agent.types import Message, ToolCall, ToolResult, ToolCallStatus, ExecutionTrace
 from light_agent.tools.tool_registry import ToolRegistry
-from light_agent.trace.trace_recorder import TraceRecorder
 
 
 class AgentResult:
@@ -25,21 +25,21 @@ class AgentRuntime:
     def __init__(
         self,
         llm_client: MockLLMClient,
+        tool_executor: MockToolExecutor,
         tool_registry: ToolRegistry,
-        tool_executor: ToolExecutor,
         config: RuntimeConfig = None
     ):
         """Initialize the runtime.
         
         Args:
             llm_client: LLM client instance
+            tool_executor: Tool executor from Light AI
             tool_registry: Tool registry
-            tool_executor: Tool executor
             config: Runtime configuration
         """
         self.llm = llm_client
-        self.registry = tool_registry
         self.executor = tool_executor
+        self.registry = tool_registry
         self.config = config or RuntimeConfig()
     
     def run(self, user_input: str) -> AgentResult:
@@ -51,9 +51,10 @@ class AgentRuntime:
         Returns:
             AgentResult with the outcome
         """
+        from light_agent.trace.trace_recorder import TraceRecorder
         trace = TraceRecorder()
-        messages: List[Dict[str, str]] = [
-            {"role": "user", "content": user_input}
+        messages: List[Message] = [
+            Message(role="user", content=user_input)
         ]
         
         trace.record_step(
@@ -67,9 +68,9 @@ class AgentRuntime:
             while iteration < self.config.max_iterations:
                 iteration += 1
                 
-                # Get available tools
+                # Get available tools for Light AI's MockLLMClient
                 tools = [
-                    {"name": tool.name, "description": tool.description}
+                    {"name": tool.name, "description": tool.description, "parameters": tool.parameters.model_dump()}
                     for tool in self.registry.get_all_tools()
                 ]
                 
@@ -79,69 +80,68 @@ class AgentRuntime:
                     content=f"Iteration {iteration}: Requesting LLM decision"
                 )
                 
-                response = self.llm.generate(messages=messages, tools=tools)
+                # Use Light AI's MockLLMClient.chat() method
+                response = self.llm.chat(messages, tools)
+                messages.append(response)
                 
-                if response["type"] == "tool_call":
-                    # Execute tool
-                    tool_name = response["tool"]
-                    arguments = response.get("arguments", {})
-                    
-                    trace.record_step(
-                        step_type="tool_call",
-                        tool=tool_name,
-                        arguments=arguments
-                    )
-                    
-                    try:
-                        result = self.executor.execute(tool_name, arguments)
-                        
+                # Check if LLM wants to call tools
+                if response.tool_calls:
+                    # Execute each tool call
+                    for tool_call in response.tool_calls:
                         trace.record_step(
-                            step_type="tool_result",
-                            tool=tool_name,
-                            result=result
+                            step_type="tool_call",
+                            content=f"Calling tool: {tool_call.name}",
+                            tool=tool_call.name,
+                            arguments=tool_call.arguments
                         )
                         
-                        # Add to conversation
-                        messages.append({
-                            "role": "assistant",
-                            "content": f"Calling {tool_name}"
-                        })
-                        messages.append({
-                            "role": "tool",
-                            "content": str(result)
-                        })
+                        # Use Light AI's MockToolExecutor.execute()
+                        tool_result = self.executor.execute(tool_call.name, tool_call.arguments)
                         
-                    except Exception as e:
-                        error_msg = str(e)
-                        trace.record_step(
-                            step_type="tool_error",
-                            tool=tool_name,
-                            error=error_msg
-                        )
-                        
-                        return AgentResult(
-                            success=False,
-                            error=f"Tool execution failed: {error_msg}",
-                            trace=trace.export()
-                        )
+                        # Add tool result to messages
+                        from light_agent.types import ToolCallStatus
+                        if tool_result.status == ToolCallStatus.SUCCESS:
+                            result_msg = Message(
+                                role="tool",
+                                content=str(tool_result.result),
+                                tool_result=tool_result
+                            )
+                            messages.append(result_msg)
+                            
+                            trace.record_step(
+                                step_type="tool_result",
+                                content=f"Tool result: {str(tool_result.result)[:100]}",
+                                tool=tool_call.name,
+                                result=tool_result.result
+                            )
+                        else:
+                            error_msg = tool_result.error or "Unknown error"
+                            result_msg = Message(
+                                role="tool",
+                                content=f"Error: {error_msg}",
+                                tool_result=tool_result
+                            )
+                            messages.append(result_msg)
+                            
+                            trace.record_step(
+                                step_type="tool_error",
+                                content=f"Tool error: {error_msg}",
+                                tool=tool_call.name,
+                                error=error_msg
+                            )
                 
-                elif response["type"] == "final_answer":
-                    # Done!
-                    answer = response.get("content", "")
-                    
+                elif response.content:
+                    # Got final answer
                     trace.record_step(
                         step_type="final_answer",
-                        content=answer
+                        content=f"Final answer: {response.content[:100]}"
                     )
                     
                     return AgentResult(
                         success=True,
-                        answer=answer,
+                        answer=response.content,
                         trace=trace.export()
                     )
-                
-                else:
-                    raise ValueError(f"Unknown response type: {response['type']}")
             
             # Max iterations reached
             return AgentResult(
@@ -153,7 +153,7 @@ class AgentRuntime:
         except Exception as e:
             trace.record_step(
                 step_type="error",
-                error=str(e)
+                content=str(e)
             )
             
             return AgentResult(

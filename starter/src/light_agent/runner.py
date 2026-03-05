@@ -15,52 +15,46 @@ The only hard requirement: running the test scenarios should produce
 a structured execution trace showing what happened.
 """
 
+from pathlib import Path
 from light_agent.mock_tools import MockToolExecutor
 from light_agent.mock_llm import MockLLMClient
 from light_agent.types import Message, ExecutionTrace
+from light_agent.tools.tool_registry import ToolRegistry
+from light_agent.runtime.agent_runtime import AgentRuntime
+from light_agent.config.runtime_config import RuntimeConfig
 
 
 def run_agent(user_request: str) -> ExecutionTrace:
     """
     Run the agent for a given user request.
 
-    This function should:
-      1. Accept a natural-language user request
-      2. Use an LLM to decide which tools to call (and with what arguments)
-      3. Execute those tools and feed results back to the LLM
-      4. Repeat until the LLM produces a final answer
-      5. Return a structured ExecutionTrace of everything that happened
-
-    Things to think about as you build this:
-      - What's the maximum number of LLM ↔ tool iterations?
-      - What happens when a tool call fails?
-      - How would you swap the LLM provider (mock → OpenAI → Anthropic)?
-      - How would you add per-tool timeouts or retry policies?
-      - What information should the execution trace capture for observability?
-      - How would you handle a tool that's marked as "mutating"?
+    Uses Light AI's provided MockLLMClient and MockToolExecutor
+    with our custom AgentRuntime orchestration.
     """
-    # Provided for convenience — use, extend, or replace as you see fit
-    tools = MockToolExecutor()
+    # Setup paths
+    base_path = Path(__file__).resolve().parent.parent.parent / "data"
+    tools_path = base_path / "tools.json"
+    mock_data_path = base_path / "mock_data.json"
+    
+    # Initialize components using Light AI's classes
+    registry = ToolRegistry(str(tools_path))
+    executor = MockToolExecutor(str(mock_data_path))
     llm = MockLLMClient()
-
-    # ----------------------------------------------------------------
-    # TODO: Build your agent loop here.
-    #
-    # A minimal loop looks something like:
-    #
-    #   1. Create the conversation with the user message
-    #   2. Send conversation + tool definitions to the LLM
-    #   3. If the LLM returns tool_calls:
-    #        a. Execute each tool call
-    #        b. Append the results to the conversation
-    #        c. Go to step 2
-    #   4. If the LLM returns content (no tool_calls):
-    #        → That's the final response. Return it.
-    #
-    # But a *good* runtime handles much more than the happy path...
-    # ----------------------------------------------------------------
-
-    raise NotImplementedError("Your agent runtime goes here!")
+    config = RuntimeConfig(max_iterations=10)
+    
+    # Run the agent
+    runtime = AgentRuntime(llm, executor, registry, config)
+    result = runtime.run(user_request)
+    
+    # Convert to ExecutionTrace format
+    trace = ExecutionTrace(
+        user_request=user_request,
+        final_response=result.answer if result.success else None,
+        tool_calls_made=len([s for s in result.trace.get('steps', []) if s.get('step_type') == 'tool_call']),
+        error=result.error if not result.success else None
+    )
+    
+    return trace
 
 
 # Quick manual test
